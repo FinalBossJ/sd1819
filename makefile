@@ -8,6 +8,7 @@
 SDIR = source
 IDIR = include
 ODIR = object
+BDIR = binary
 
 FLAGS = -Wall -I $(IDIR)
 
@@ -44,13 +45,13 @@ test_table.o: $(SDIR)/test_table.c
 	gcc $(FLAGS) -c $(SDIR)/test_table.c -o $(ODIR)/test_table.o
 
 test_table: test_table.o table.o list.o entry.o data.o
-	gcc $(ODIR)/test_table.o $(ODIR)/table.o $(ODIR)/list.o $(ODIR)/entry.o $(ODIR)/data.o -o test_table
+	gcc $(ODIR)/test_table.o $(ODIR)/table.o $(ODIR)/list.o $(ODIR)/entry.o $(ODIR)/data.o -o $(BDIR)/test_table
 
 test_data: test_data.o data.o
-	gcc $(ODIR)/test_data.o $(ODIR)/data.o -o test_data
+	gcc $(ODIR)/test_data.o $(ODIR)/data.o -o $(BDIR)/test_data
 
 test_entry: test_entry.o entry.o data.o
-	gcc $(ODIR)/test_entry.o $(ODIR)/entry.o $(ODIR)/data.o -o test_entry
+	gcc $(ODIR)/test_entry.o $(ODIR)/entry.o $(ODIR)/data.o -o $(BDIR)/test_entry
 
 test_list: test_list.o list.o entry.o data.o
-	gcc $(ODIR)/test_list.o $(ODIR)/list.o $(ODIR)/entry.o $(ODIR)/data.o -o test_list
+	gcc $(ODIR)/test_list.o $(ODIR)/list.o $(ODIR)/entry.o $(ODIR)/data.o -o $(BDIR)/test_list
