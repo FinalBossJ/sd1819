@@ -28,12 +28,11 @@ int testPutInexistente() {
 	struct table_t *table = table_create(5);
 	char *key[1024];
 	struct data_t *data[1024], *d;
-
+	
 	for(i=0; i<1024; i++) {
 		key[i] = (char*)malloc(16*sizeof(char));
 		sprintf(key[i],"a/key/b-%d",i);
 		data[i] = data_create2(strlen(key[i])+1,strdup(key[i]));
-
 		table_put(table,key[i],data[i]);
 	}
 

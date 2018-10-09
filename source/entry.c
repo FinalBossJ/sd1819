@@ -1,11 +1,20 @@
+/*
+SD 2018/2019
+Projecto 1 - Grupo 32
+Sandro Correia - 44871
+Diogo Catarino - 44394
+Pedro Almeida - 46401
+*/
 
 #include <stdlib.h>
 #include <string.h>
 
 #include "entry.h"
 
-/* Função que cria um novo par {chave, valor} (isto é, que inicializa
- * a estrutura e aloca a memória necessária).
+/* Função que cria uma entry, reservando a memória necessária para a
+* estrutura e inicializando os campos key e value, respetivamente, com a
+* string e o bloco de dados passados como parâmetros, sem reservar
+* memória para estes campos.
  */
 struct entry_t *entry_create(char *key, struct data_t *data){
 	if (key == NULL || data == NULL )
@@ -25,7 +34,7 @@ struct entry_t *entry_create(char *key, struct data_t *data){
 	return result;
 }
 
-/* Função que destrói um par {chave-valor} e liberta toda a memória.
+/* Função que elimina uma entry, libertando a memória por ela ocupada
  */
 void entry_destroy(struct entry_t *entry){
 	if (entry != NULL){
@@ -36,7 +45,8 @@ void entry_destroy(struct entry_t *entry){
 }
 
 
-/* Função que duplica um par {chave, valor}.
+/*  Função que duplica uma entry, reservando a memória necessária para a
+* nova estrutura.
  */
 struct entry_t *entry_dup(struct entry_t* entry){
 	if (entry == NULL)

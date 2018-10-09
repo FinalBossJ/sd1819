@@ -1,3 +1,10 @@
+/*
+SD 2018/2019
+Projecto 1 - Grupo 32
+Sandro Correia - 44871
+Diogo Catarino - 44394
+Pedro Almeida - 46401
+*/
 #ifndef _TABLE_PRIVATE_H
 #define _TABLE_PRIVATE_H
 
@@ -17,7 +24,5 @@ struct table_t *table_create(int n);
 * Devolve um int entre 0 e L, ou -1 em caso de erro
 */
 int key_hash(char* key, int l);
-
-void table_print(struct table_t *table);
 
 #endif

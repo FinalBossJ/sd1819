@@ -1,9 +1,18 @@
+/*
+SD 2018/2019
+Projecto 1 - Grupo 32
+Sandro Correia - 44871
+Diogo Catarino - 44394
+Pedro Almeida - 46401
+*/
 #include <stdlib.h>
 #include <string.h>
 
 #include "list-private.h"
 
-/* Cria uma nova lista. Em caso de erro, retorna NULL.
+/* Função que cria uma nova lista (estrutura list_t a ser definida pelo
+* grupo no ficheiro list-private.h).
+* Em caso de erro, retorna NULL.
  */
 struct list_t *list_create(){
 	struct list_t* result = (struct list_t*)malloc( sizeof(struct list_t) );
@@ -17,8 +26,8 @@ struct list_t *list_create(){
 }
 
 
-/* Elimina uma lista, libertando *toda* a memoria utilizada pela
- * lista.
+/*  Função que elimina uma lista, libertando *toda* a memoria utilizada
+* pela lista.
  */
 void list_destroy(struct list_t* list){
 	if ( list != NULL){
@@ -35,9 +44,9 @@ void list_destroy(struct list_t* list){
 }
 
 
-/* Adiciona uma entry na lista. Como a lista deve ser ordenada, 
- * a nova entry deve ser colocada no local correto.
- * Retorna 0 (OK) ou -1 (erro)
+/** Função que adiciona no final da lista (tail) a entry passada como
+* argumento.
+* Retorna 0 (OK) ou -1 (erro).
  */
 int list_add(struct list_t *list, struct entry_t *entry){
 	if (list == NULL || entry == NULL)
@@ -54,32 +63,19 @@ int list_add(struct list_t *list, struct entry_t *entry){
 	}
 
 	while (current != NULL){
-		if ( strcmp(current->value->key, entry->key) < 0 ){
-			if (before == NULL){
-				list->first = node_create( entry, current );
-			}else{
-				before->next = node_create( entry, current );
-			}
-			list->size++;
-			return 0;
-		}else if ( strcmp(current->value->key, entry->key) == 0 ){
-			data_destroy(current->value->value);
-			current->value->value = data_dup(entry->value);
-			return 0;
-		}
 		before = current;
 		current = current->next;
 	}
 
 	//é o ultimo node
-	before->next = node_create( entry, NULL);
+	before->next = node_create(entry, NULL);
 	list->size++;
 	return 0;
 }
 
 
-/* Elimina da lista um elemento com a chave key. 
- * Retorna 0 (OK) ou -1 (erro)
+/* Função que elimina da lista a entry com a chave key.
+* Retorna 0 (OK) ou -1 (erro).
  */
 int list_remove(struct list_t* list, char* key){
 	if (list == NULL || key == NULL)
@@ -106,9 +102,11 @@ int list_remove(struct list_t* list, char* key){
 }
 
 
-/* Obtem um elemento da lista que corresponda à chave key. 
- * Retorna a referência do elemento na lista (ou seja, uma alteração
- * implica alterar o elemento na lista). 
+/*  Função que obtém da lista a entry com a chave key.
+* Retorna a referência da entry na lista ou NULL em caso de erro.
+* Obs: as funções list_remove e list_destroy vão libertar a memória
+* ocupada pela entry ou lista, significando que é retornado NULL
+* quando é pretendido o acesso a uma entry inexistente.
  */
 struct entry_t *list_get(struct list_t* list, char* key){
 	if ( list == NULL || key == NULL )
@@ -125,8 +123,9 @@ struct entry_t *list_get(struct list_t* list, char* key){
 }
 
 
-/* Retorna o tamanho (numero de elementos) da lista 
- * Retorna -1 em caso de erro.  */
+/* Função que retorna o tamanho (número de elementos (entries)) da lista,
+* ou -1 (erro).
+*/
 int list_size(struct list_t* list){
 	if (list == NULL)
 		return -1;
@@ -135,7 +134,8 @@ int list_size(struct list_t* list){
 
 
 /* Devolve um array de char * com a cópia de todas as keys da 
- * tabela, e um último elemento a NULL.
+ * tabela, colocando o último elemento do array com o valor NULL e
+* reservando toda a memória necessária.
  */
 char** list_get_keys(struct list_t* list){
 	if (list == NULL)
@@ -163,8 +163,9 @@ char** list_get_keys(struct list_t* list){
 }
 
 
-/* Liberta a memoria reservada por list_get_keys.
- */
+/* Função que liberta a memória ocupada pelo array das keys da lista,
+* obtido pela função list_get_keys.
+*/
 void list_free_keys(char** keys){
 	if ( keys != NULL){
 		int i = 0;
@@ -179,7 +180,7 @@ void list_free_keys(char** keys){
 /* Função que cria um novo node (isto é, que inicializa
  * a estrutura e aloca a memória necessária).
  */
-struct node_t* node_create(struct entry_t* value, struct node_t* next){
+struct node_t *node_create(struct entry_t* value, struct node_t* next){
 	if (value == NULL)
 		return NULL;
 	
@@ -188,7 +189,7 @@ struct node_t* node_create(struct entry_t* value, struct node_t* next){
 	if (result == NULL)
 		return NULL;
 
-	result->value = entry_dup(value);
+	result->value = value;
 	result->next = next;
 	return result;
 }
