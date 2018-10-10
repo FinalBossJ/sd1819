@@ -63,8 +63,17 @@ int list_add(struct list_t *list, struct entry_t *entry){
 	}
 
 	while (current != NULL){
+		//Caso exista na lista uma entry com key igual a que queremos inserir,
+		//os dados da entry (value) já existente na lista serão substituídos pelos os da nova entry.
+		if(strcmp(current->value->key, entry->key) == 0){
+			before->next = node_create(entry, current->next);
+			list->size++;
+			node_destroy(current);
+			return 0;
+		}
 		before = current;
 		current = current->next;
+		
 	}
 
 	//é o ultimo node
