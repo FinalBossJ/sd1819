@@ -1,5 +1,5 @@
 #SD 2018/2019
-#Projecto 1 - Grupo 32
+#Projecto 2 - Grupo 32
 #Sandro Correia - 44871
 #Diogo Catarino - 44394
 #Pedro Almeida - 46401
@@ -13,8 +13,10 @@ BDIR = binary
 FLAGS = -Wall -I $(IDIR)
 
 
-tests: test_data test_entry test_list test_table
+all: clean test_message
 
+clean :
+	rm $(ODIR)/*.o $(BDIR)/* $(SDIR)/~*.c ~makefile 2>/dev/null; true
 
 data.o: $(SDIR)/data.c $(IDIR)/data.h
 	gcc $(FLAGS) -c $(SDIR)/data.c -o $(ODIR)/data.o
@@ -28,30 +30,17 @@ list.o: $(SDIR)/list.c $(IDIR)/list.h $(IDIR)/list-private.h
 table.o: $(SDIR)/table.c $(IDIR)/table.h $(IDIR)/table-private.h
 	gcc $(FLAGS) -c $(SDIR)/table.c -o $(ODIR)/table.o
 
+message.o: $(SDIR)/message.c $(IDIR)/message.h
+	gcc $(FLAGS) -c $(SDIR)/message.c -o $(ODIR)/message.o
 
 
 
-#regras para os testes da primeira parte do projeto:
-test_data.o: $(SDIR)/test_data.c
-	gcc $(FLAGS) -c $(SDIR)/test_data.c -o $(ODIR)/test_data.o
 
-test_entry.o: $(SDIR)/test_entry.c
-	gcc $(FLAGS) -c $(SDIR)/test_entry.c -o $(ODIR)/test_entry.o
 
-test_list.o: $(SDIR)/test_list.c
-	gcc $(FLAGS) -c $(SDIR)/test_list.c -o $(ODIR)/test_list.o
 
-test_table.o: $(SDIR)/test_table.c
-	gcc $(FLAGS) -c $(SDIR)/test_table.c -o $(ODIR)/test_table.o
+#regras para os testes da segunda parte do projeto:
+test_message.o: $(SDIR)/test_message.c
+	gcc $(FLAGS) -c $(SDIR)/test_message.c -o $(ODIR)/test_message.o
 
-test_table: test_table.o table.o list.o entry.o data.o
-	gcc $(ODIR)/test_table.o $(ODIR)/table.o $(ODIR)/list.o $(ODIR)/entry.o $(ODIR)/data.o -o $(BDIR)/test_table
-
-test_data: test_data.o data.o
-	gcc $(ODIR)/test_data.o $(ODIR)/data.o -o $(BDIR)/test_data
-
-test_entry: test_entry.o entry.o data.o
-	gcc $(ODIR)/test_entry.o $(ODIR)/entry.o $(ODIR)/data.o -o $(BDIR)/test_entry
-
-test_list: test_list.o list.o entry.o data.o
-	gcc $(ODIR)/test_list.o $(ODIR)/list.o $(ODIR)/entry.o $(ODIR)/data.o -o $(BDIR)/test_list
+test_message: test_message.o message.o data.o table.o entry.o list.o
+	gcc $(ODIR)/test_message.o $(ODIR)/message.o $(ODIR)/data.o $(ODIR)/table.o $(ODIR)/entry.o $(ODIR)/list.o -o $(BDIR)/test_message
