@@ -12,6 +12,9 @@ Pedro Almeida - 46401
 
 #include "message.h"
 #include "message-private.h"
+
+#include "base64.c"
+
 #include "table.h"  /* for table_free_keys() */
 
 void free_message(struct message_t *msg){
@@ -29,13 +32,53 @@ void free_message(struct message_t *msg){
   }
 }
 
+/* Serializa o conteúdo de mensagem passada em message_t, colocando a
+ * mensagem serializada como uma sequência de bytes num buffer cujo espaço
+ * deverá ser alocado e cujo endereço deverá ser colocado no char* apontado
+ * por msg_buf. Retorna o tamanho do buffer alocado, ou -1 em caso de erro.
+ * A mensagem serializada numa sequência de bytes tem o seguinte formato:
+ *
+ *  OPCODE      C_TYPE      CONTENT
+ * [2 bytes]   [2 bytes]   [CT bytes]
+ *  
+ * em que OPCODE corresponde ao código da operação (opcode) a realizar na
+ * tabela do servidor, C_TYPE corresponde ao tipo de conteúdo da mensagem
+ * e CONTENT corresponde ao conteúdo da mensagem.
+ *
+ * CONTENT depende de C_TYPE, da seguinte forma: 
+ *
+ * CT_KEY:        KEYSIZE(KS)     KEY
+ *                 [2 bytes]   [KS bytes]
+ *
+ * CT_VALUE:      DATASIZE(DS)    DATA
+ *                 [4 bytes]   [DS bytes]
+ *
+ * CT_ENTRY:      KEYSIZE(KS)     KEY      DATASIZE(DS)     DATA
+ *                 [2 bytes]   [KS bytes]   [4 bytes]    [DS bytes]
+ *
+ * CT_KEYS:         NKEYS    KEYSZ_1     KEY_1    ...  KEYSZ_N     KEY_N
+ *                [4 bytes] [2 bytes] [KS1 bytes] ... [2 bytes] [KSN bytes]
+ *
+ * CT_RESULT:      RESULT
+ *                [4 bytes]
+ *
+ * Notar que o `\0´ no fim das strings (chaves) e o NULL no fim do array de
+ * chaves não são enviados nas mensagens.
+ *
+ * Notar também que o bloco de dados binários correspondentes a DATA deve
+ * ser codificado no formato BASE64. Para tal recomenda-se o uso da
+ * biblioteca base64.h e base64.c (disponível em 
+ * http://josefsson.org/base-encoding/)
+ */
 int message_to_buffer(struct message_t *msg, char **msg_buf){
-  int buffer_size = _SHORT + _SHORT + _SHORT;
-  int i, k, int_v;
-  short short_v;
-  char *ptr;
-  if (msg==NULL)
-    return -1;
+  	int buffer_size = _SHORT + _SHORT + _SHORT;
+  	int i, k, int_v;
+  	void *encodedData;
+  	short short_v;
+  	char *ptr;
+  	if (msg==NULL)
+    	return -1;
+
 	switch (msg->c_type){
 		case CT_VALUE:
 			buffer_size += _INT;
@@ -58,22 +101,19 @@ int message_to_buffer(struct message_t *msg, char **msg_buf){
 			break;
 		case CT_RESULT:
 			buffer_size += _INT;
-			break;
+			break;	
 	}
-  if ((*msg_buf = (char *) malloc(buffer_size)) == NULL)
-    return -1;
-  ptr = *msg_buf;
+	if ((*msg_buf = (char *) malloc(buffer_size)) == NULL)
+	  return -1;
+	ptr = *msg_buf;
 
-  short_v = htons(msg->opcode);
-  memcpy(ptr, &short_v, _SHORT);
-  ptr += _SHORT;
+	short_v = htons(msg->opcode);
+	memcpy(ptr, &short_v, _SHORT);
+	ptr += _SHORT;
 
-  short_v = htons(msg->c_type);
-  memcpy(ptr, &short_v, _SHORT);
-  ptr += _SHORT;
-
-  if (msg->c_type == CT_RESULT){
-  }
+	short_v = htons(msg->c_type);
+	memcpy(ptr, &short_v, _SHORT);
+	ptr += _SHORT;
 
 	switch (msg->c_type){
 		case CT_RESULT:
@@ -103,7 +143,13 @@ int message_to_buffer(struct message_t *msg, char **msg_buf){
 			int_v = htonl(msg->content.value->datasize);
 			memcpy(ptr, &int_v, _INT);
 			ptr += _INT;
-			memcpy(ptr, msg->content.value->data, msg->content.value->datasize);
+
+			encodedData = malloc(msg->content.value->datasize);
+			if(encodedData == NULL)
+				return -1;
+
+			base64_encode(msg->content.value->data, msg->content.value->datasize, encodedData, msg->content.value->datasize);
+			memcpy(ptr, encodedData, msg->content.value->datasize);
 			break;
 		case CT_ENTRY:
 			short_v = htons(strlen(msg->content.entry->key));
@@ -114,12 +160,23 @@ int message_to_buffer(struct message_t *msg, char **msg_buf){
 			int_v = htonl(msg->content.entry->value->datasize);
 			memcpy(ptr, &int_v, _INT);
 			ptr += _INT;
-			memcpy(ptr, msg->content.entry->value->data, msg->content.entry->value->datasize);
+
+			encodedData = malloc(msg->content.entry->value->datasize);
+			if(encodedData == NULL)
+				return -1;
+
+			base64_encode(msg->content.entry->value->data, msg->content.entry->value->datasize, encodedData, msg->content.entry->value->datasize);
+			memcpy(ptr, encodedData, msg->content.entry->value->datasize);
 			break;
 	}
   return buffer_size;
 }
 
+
+/* De-serializa a mensagem contida em msg_buf, com tamanho msg_size,
+ * colocando-a e retornando-a numa struct message_t, cujo espaço em
+ * memória deve ser reservado.
+ */
 struct message_t *buffer_to_message(char *msg_buf, int msg_size){
   struct message_t *m;
   struct data_t *d;
@@ -135,8 +192,6 @@ struct message_t *buffer_to_message(char *msg_buf, int msg_size){
 
   m->opcode = ntohs(*(short *) msg_buf++);
   m->c_type = ntohs(*(short *) ++msg_buf);
-  msg_buf++;
-
   /*if ((m->opcode < 10) || (m->opcode > 50)){
     free_message(m);
     return NULL;
@@ -186,7 +241,8 @@ struct message_t *buffer_to_message(char *msg_buf, int msg_size){
 				free(m);
 				return NULL;
 			}
-			memcpy(m->content.value->data, msg_buf, ks);
+
+			base64_decode(msg_buf, ks, m->content.value->data, &ks);
 			return m;
 		case CT_ENTRY:
 			ss = ntohs(*(short *) msg_buf);
@@ -205,7 +261,8 @@ struct message_t *buffer_to_message(char *msg_buf, int msg_size){
 				free(m);
 				return NULL;
 			}
-			memcpy(d->data, msg_buf, ks);
+			base64_decode(msg_buf, ks, d->data, &ks);
+			//memcpy(d->data, msg_buf, ks);
 			m->content.entry = (struct entry_t *)malloc(sizeof(struct entry_t));
 			if (m->content.entry == NULL){
 				data_destroy(d);
@@ -232,6 +289,9 @@ struct message_t *buffer_to_message(char *msg_buf, int msg_size){
 			}
 			data_destroy(d);
 			free(key);
+			
+			return m;
+		case CT_NONE:
 			return m;
 	}
 	free(m);
