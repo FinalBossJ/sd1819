@@ -158,7 +158,6 @@ int testValue() {
 			   strcmp(msg->content.value->data,"abc") == 0;
 
 	free(msg_str);
-	free(datastr);
 	//print_message(msg);
 	free_message(msg);
 
@@ -184,8 +183,6 @@ int testEntry() {
 	msg->content.entry = (struct entry_t *) malloc(sizeof(struct entry_t));
 	msg->content.entry->key = strdup(datastr);
 	msg->content.entry->value = data_dup(d);
-
-	data_destroy(d);
 
 	size = message_to_buffer(msg, &msg_str);
 
@@ -222,7 +219,7 @@ int testEntry() {
 			   strcmp(msg->content.entry->value->data, datastr) == 0;
 
 	free(msg_str);
-	free(datastr);
+	data_destroy(d);
 
 	//print_message(msg);
 	
@@ -243,10 +240,10 @@ int testKeys() {
 	printf("Módulo mensagem -> teste - Keys:");
 
 	msg = (struct message_t *) malloc(sizeof(struct message_t));
-	msg->opcode = OP_GETKEYS;
+	msg->opcode = OP_GETKEYS+1;
 	msg->c_type = CT_KEYS;
 	msg->content.keys = (char **) malloc(5 * sizeof(char *));
-	msg->content.keys[0] = strdup("ul2015");
+	msg->content.keys[0] = strdup("ul2018");
 	msg->content.keys[1] = strdup("SD");
 	msg->content.keys[2] = strdup("teste");
 	msg->content.keys[3] = strdup("123");
@@ -275,7 +272,7 @@ int testKeys() {
 
 	msg = buffer_to_message(msg_str, size);
 
-	result = result && msg->opcode == OP_GETKEYS &&
+	result = result && msg->opcode == OP_GETKEYS+1 &&
 			   msg->c_type == CT_KEYS &&
 			   strcmp(msg->content.keys[0], keys[0]) == 0 &&
 			   strcmp(msg->content.keys[1], keys[1]) == 0 &&
