@@ -13,7 +13,7 @@ int table_skel_init(int n_lists);
 
 /* Liberta toda a memória e recursos alocados pela função table_skel_init.
  */
-int table_skel_destroy();
+void table_skel_destroy();
 
 /* Executa uma operação na tabela (indicada pelo opcode contido em msg)
  * e utiliza a mesma estrutura message_t para devolver o resultado.
