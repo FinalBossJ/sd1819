@@ -8,7 +8,9 @@ Pedro Almeida - 46401
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #include "message.h"
 #include "message-private.h"
@@ -17,6 +19,9 @@ Pedro Almeida - 46401
 
 #include "table.h"  /* for table_free_keys() */
 
+/* Liberta a memoria alocada na função buffer_to_message para a
+ * struct message_t.
+ */
 void free_message(struct message_t *msg){
   if (msg != NULL){
     switch (msg->c_type){
@@ -30,6 +35,43 @@ void free_message(struct message_t *msg){
     }
     free(msg);
   }
+}
+
+/* Função que garante o envio de len bytes armazenados em buf,
+   através da socket sock.
+*/
+int write_all(int sock, char *buf, int len){
+    int bufsize = len;
+
+    while(len>0) {
+    
+        int res = write(sock, buf, len);
+        if(res<0) {
+            if(errno==EINTR) continue;
+            return res;
+        }
+        buf += res;
+        len -= res;
+    }
+    return bufsize;
+}
+
+
+/* Função que garante a receção de len bytes através da socket sock,
+   armazenando-os em buf.
+*/
+int read_all(int sock, char *buf, int len){
+  int bufsize = len;
+    while(len>0) {
+        int res = read(sock, buf, len);
+        if(res<=0) {
+            if(errno==EINTR) continue;
+            return res;
+        }
+        buf += res;
+        len -= res;
+    }
+    return bufsize;
 }
 
 /* Serializa o conteúdo de mensagem passada em message_t, colocando a

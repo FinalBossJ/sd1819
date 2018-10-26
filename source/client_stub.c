@@ -1,4 +1,15 @@
-
+/*
+SD 2018/2019
+Projecto 2 - Grupo 32
+Sandro Correia - 44871
+Diogo Catarino - 44394
+Pedro Almeida - 46401
+*/
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <errno.h>
+#include <arpa/inet.h>
 
 #include "client_stub.h"
 #include "client_stub-private.h"
@@ -17,24 +28,23 @@ struct rtable_t *rtable_connect(const char *address_port){
 	if(rtable==NULL)
 		return NULL;
 	
-	struct server_t * server = network_connect(address_port);
-	if(server==NULL)
+	rtable->server = (struct server_t*) malloc(sizeof(struct server_t));
+	if(rtable->server==NULL)
 		return NULL;
 
-	rtable->server = server;
+	rtable->server->address = strdup(address_port);
 	return rtable;
-
 }
 
 /* Termina a associação entre o cliente e a tabela remota, fechando a 
  * ligação com o servidor e libertando toda a memória local.
  * Retorna 0 se tudo correr bem e -1 em caso de erro.
  */
-int rtable_disconnect(struct rtables_t *rtable){
+int rtable_disconnect(struct rtable_t *rtable){
 	
 	if(rtable==NULL)
 		return -1;
-	if(network_close(rtable->server) != 0)
+	if(network_close(rtable) != 0)
 		return -1;
 	free(rtable);
 	return 0;
@@ -56,8 +66,8 @@ int rtable_put(struct rtable_t *rtable, struct entry_t *entry){
         free_message(msg);
         return -1;
 	}
-	msg->content.entry->key = key;
-	msg->content.entry->value = value;
+	msg->content.entry->key = strdup(entry->key);
+	memcpy(msg->content.entry->value, entry->value, sizeof(entry->value));
 
 	printf("\nA ENVIAR:\n");
     print_message(msg);
@@ -93,7 +103,7 @@ struct data_t *rtable_get(struct rtable_t *rtable, char *key){
     if(message_received != NULL) {
         printf("A RECEBER:\n");
         print_message(message_received);
-        return message_received->content.data;
+        return message_received->content.value;
     }
 	return NULL;
 
@@ -103,7 +113,31 @@ struct data_t *rtable_get(struct rtable_t *rtable, char *key){
  * toda a memoria alocada na respectiva operacao rtable_put().
  * Devolve: 0 (ok), -1 (key not found ou problemas).
  */
-int rtable_del(struct rtable_t *rtable, char *key);
+int rtable_del(struct rtable_t *rtable, char *key){
+	if (rtable == NULL || key == NULL)
+		return -1;
+
+	struct message_t* msg = (struct message_t*) malloc(sizeof(struct message_t));
+
+	if (msg == NULL)
+		return NULL;
+
+	msg->opcode = OP_DEL;
+	msg->c_type = CT_KEY;
+	msg->content.key = strdup(key);
+	
+	printf("\nA ENVIAR:\n");
+    print_message(msg);
+
+	struct message_t* message_received = network_send_receive(rtable->server, msg);
+
+	if(message_received != NULL) {
+        printf("A RECEBER:\n");
+        print_message(message_received);
+        return 0;
+    }
+	return -1;
+}
 
 /* Devolve o número de elementos da tabela.
  */
