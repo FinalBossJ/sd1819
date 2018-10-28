@@ -1,5 +1,5 @@
 SD 2018/2019
-Projecto 1 - Grupo 32
+Projecto 2 - Grupo 32
 
 ----------------------
 
