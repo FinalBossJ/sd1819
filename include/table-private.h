@@ -9,6 +9,7 @@ Pedro Almeida - 46401
 #define _TABLE_PRIVATE_H
 
 #include "list.h"
+#include "table.h"
 
 struct table_t{
 	struct list_t** head; /* Primeira list da tabela */

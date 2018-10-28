@@ -15,7 +15,7 @@ Pedro Almeida - 46401
 * necessária para armazenar os dados, especificada pelo parâmetro size
  */
 struct data_t *data_create(int size){
-	if (size <= 0)
+	if (size < 0)
 		return NULL;
 	
 	struct data_t* result = (struct data_t*)malloc( sizeof ( struct data_t ) );

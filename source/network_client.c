@@ -6,12 +6,16 @@ Diogo Catarino - 44394
 Pedro Almeida - 46401
 */
 
-#include "message.c"
-#include "network_client.h"
-#include "network_client-private.h"
-#include "client_stub.h"
-#include "client_stub-private.h"
+
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+#include "message-private.h"
+#include "network_client-private.h"
+#include "client_stub-private.h"
 
 /* Esta função deve:
 * - Obter o endereço do servidor (struct sockaddr_in) a base da
@@ -39,15 +43,17 @@ int network_connect(struct rtable_t *rtable){
     hostname = strtok(new_address_port, ":");
     port = strtok(NULL, " ");
 
-    if ((server->socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    if (port == NULL || (server->socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
             perror("Erro ao criar socket TCP");
+            free(server->inf);
+            free(server);
             return -1;
     }
 
     server->inf->sin_family = AF_INET;
     server->inf->sin_port = htons(atoi(port));
     if (inet_pton(AF_INET, hostname, &(server->inf->sin_addr)) < 1) {
-        printf("Erro ao converter IP\n");
+        perror("Erro ao converter IP");
         network_close(rtable);
         return -1;
     }
@@ -73,7 +79,7 @@ struct message_t *network_send_receive(struct rtable_t * rtable, struct message_
 	char *message_out, *buffer_in;
 	int message_size, msg_size, result;
 	struct message_t* msg_resposta;
-
+    
 	/* Verificar parâmetros de entrada */
 	if(msg == NULL || rtable == NULL){
 		return NULL;
@@ -82,7 +88,7 @@ struct message_t *network_send_receive(struct rtable_t * rtable, struct message_
 	struct server_t* server = rtable->server;
 
     if(server == NULL)
-    	return -1;
+    	return NULL;
 
 	/* Serializar a mensagem recebida */
     

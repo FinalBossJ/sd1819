@@ -16,7 +16,6 @@ struct rtable_t{
 	struct server_t * server;
 };
 
-//Imprime uma message
-void print_message(struct message_t *msg);
+
 
 #endif

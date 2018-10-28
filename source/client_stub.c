@@ -11,8 +11,8 @@ Pedro Almeida - 46401
 #include <errno.h>
 #include <arpa/inet.h>
 
-#include "client_stub.h"
 #include "client_stub-private.h"
+#include "message-private.h"
 #include "table.h"
 
 /* Função para estabelecer uma associação entre o cliente e uma tabela no 
@@ -29,10 +29,17 @@ struct rtable_t *rtable_connect(const char *address_port){
 		return NULL;
 	
 	rtable->server = (struct server_t*) malloc(sizeof(struct server_t));
-	if(rtable->server==NULL)
+	if(rtable->server==NULL){
+		free(rtable);
 		return NULL;
+	}
 
 	rtable->server->address = strdup(address_port);
+
+	if(network_connect(rtable) == -1){
+		free(rtable);
+		return NULL;
+	}
 	return rtable;
 }
 
@@ -67,14 +74,18 @@ int rtable_put(struct rtable_t *rtable, struct entry_t *entry){
         return -1;
 	}
 	msg->content.entry->key = strdup(entry->key);
-	memcpy(msg->content.entry->value, entry->value, sizeof(entry->value));
+	msg->content.entry->value = data_dup(entry->value);
 
+	printf("\n\n######################\n");
+    printf("######################\n\n\n");
 	printf("\nA ENVIAR:\n");
     print_message(msg);
 
-	struct message_t* message_received = network_send_receive(rtable->server, msg);
+	struct message_t* message_received = network_send_receive(rtable, msg);
 	
     if(message_received != NULL) {
+    	printf("\n\n######################\n");
+    	printf("######################\n\n\n");
         printf("A RECEBER:\n");
         print_message(message_received);
         return 0;
@@ -95,12 +106,16 @@ struct data_t *rtable_get(struct rtable_t *rtable, char *key){
 	msg->opcode = OP_GET;
 	msg->c_type = CT_KEY;
 	msg->content.key = strdup(key);
+	printf("\n\n######################\n");
+    printf("######################\n\n\n");
 	printf("\nA ENVIAR:\n");
     print_message(msg);
 
-	struct message_t* message_received = network_send_receive(rtable->server, msg);
+	struct message_t* message_received = network_send_receive(rtable, msg);
 	
     if(message_received != NULL) {
+    	printf("\n\n######################\n");
+   		printf("######################\n\n\n");
         printf("A RECEBER:\n");
         print_message(message_received);
         return message_received->content.value;
@@ -120,18 +135,22 @@ int rtable_del(struct rtable_t *rtable, char *key){
 	struct message_t* msg = (struct message_t*) malloc(sizeof(struct message_t));
 
 	if (msg == NULL)
-		return NULL;
+		return -1;
 
 	msg->opcode = OP_DEL;
 	msg->c_type = CT_KEY;
 	msg->content.key = strdup(key);
-	
+
+	printf("\n\n######################\n");
+    printf("######################\n\n\n");
 	printf("\nA ENVIAR:\n");
     print_message(msg);
 
-	struct message_t* message_received = network_send_receive(rtable->server, msg);
+	struct message_t* message_received = network_send_receive(rtable, msg);
 
 	if(message_received != NULL) {
+		printf("\n\n######################\n");
+    	printf("######################\n\n\n");
         printf("A RECEBER:\n");
         print_message(message_received);
         return 0;
@@ -142,19 +161,23 @@ int rtable_del(struct rtable_t *rtable, char *key){
 /* Devolve o número de elementos da tabela.
  */
 int rtable_size(struct rtable_t *rtable){
-	if(rtable = NULL)
+	if(rtable == NULL)
 		return -1;
 
 	struct message_t* msg = (struct message_t*) malloc(sizeof(struct message_t));
 	msg->opcode = OP_SIZE;
 	msg->c_type = CT_NONE;
 
+	printf("\n\n######################\n");
+    printf("######################\n\n\n");
 	printf("\nA ENVIAR:\n");
     print_message(msg);
 
-	struct message_t* message_received = network_send_receive(rtable->server, msg);
+	struct message_t* message_received = network_send_receive(rtable, msg);
 	
     if(message_received != NULL) {
+    	printf("\n\n######################\n");
+    	printf("######################\n\n\n");
         printf("A RECEBER:\n");
         print_message(message_received);
         return (int)message_received->content.result;
@@ -171,19 +194,23 @@ char **rtable_get_keys(struct rtable_t *rtable){
 		return NULL;
 
 	struct message_t* msg = (struct message_t*) malloc(sizeof(struct message_t));
-	msg->opcode = OP_GET;
+	msg->opcode = OP_GETKEYS;
 	msg->c_type = CT_NONE;
 
+	printf("\n\n######################\n");
+    printf("######################\n\n\n");
 	printf("\nA ENVIAR:\n");
     print_message(msg);
 
-	struct message_t* message_received = network_send_receive(rtable->server, msg);
+	struct message_t* message_received = network_send_receive(rtable, msg);
 	
     if(message_received != NULL) {
+    	printf("\n\n######################\n");
+    	printf("######################\n\n\n");
         printf("A RECEBER:\n");
         print_message(message_received);
     }
-	if (message_received->opcode != OP_GET + 1) {
+	if (message_received->opcode != OP_GETKEYS + 1) {
 		free(msg);
 		free_message(message_received);
 		return NULL;

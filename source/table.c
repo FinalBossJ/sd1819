@@ -10,7 +10,6 @@ Pedro Almeida - 46401
 #include <stdio.h>
 
 #include "table-private.h"
-#include "table.h"
 
 /* Função de hash
 * Devolve um int entre 0 e L, ou -1 em caso de erro
@@ -37,8 +36,9 @@ struct table_t *table_create(int n) {
 
     struct table_t* table = (struct table_t*)malloc(sizeof(struct table_t));
 
-    if (table == NULL)
+    if (table == NULL){
         return NULL;
+    }
 
     table->head = (struct list_t**)malloc(n * (sizeof(struct list_t*)));
 
@@ -134,8 +134,15 @@ struct data_t *table_get(struct table_t *table, char *key){
     
     struct entry_t* entry = list_get(table->head[hash], key);
 
-    if (entry == NULL)
-        return NULL;
+    if (entry == NULL){
+       struct data_t *value = (struct data_t*)malloc( sizeof ( struct data_t ) );
+          if(value != NULL){
+            value->datasize = 0;
+            value->data = NULL;
+            return value;
+        }else
+            return NULL;
+    }
     
     return data_dup(entry->value);
 }

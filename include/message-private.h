@@ -10,6 +10,7 @@ Pedro Almeida - 46401
 #define _MESSAGE_PRIVATE_H
 
 #include <signal.h>
+#include "message.h"
 
 #define _SHORT 2
 #define _INT 4
@@ -24,5 +25,8 @@ int write_all(int sock, char *buf, int len);
    armazenando-os em buf.
 */
 int read_all(int sock, char *buf, int len);
+
+//Imprime uma message
+void print_message(struct message_t *msg);
 
 #endif

@@ -6,36 +6,6 @@
 
 #include "message.h"
 
-void print_message(struct message_t *msg) {
-	int i;
-	
-	printf("\n----- MESSAGE -----\n");
-	printf("opcode: %d, c_type: %d\n", msg->opcode, msg->c_type);
-	switch(msg->c_type) {
-		case CT_ENTRY:{
-			printf("key: %s\n", msg->content.entry->key);
-			printf("datasize: %d\n", msg->content.entry->value->datasize);
-		}break;
-		case CT_KEY:{
-			printf("key: %s\n", msg->content.key);
-		}break;
-		case CT_KEYS:{
-			for(i = 0; msg->content.keys[i] != NULL; i++) {
-				printf("key[%d]: %s\n", i, msg->content.keys[i]);
-			}
-		}break;
-		case CT_VALUE:{
-			printf("datasize: %d\n", msg->content.value->datasize);
-		}break;
-		case CT_RESULT:{
-			printf("result: %d\n", msg->content.result);
-		}break;
-		case CT_NONE:{
-			printf("none");
-		};
-	}
-	printf("-------------------\n");
-}
 
 int testResult() {
 	int result, size, res;

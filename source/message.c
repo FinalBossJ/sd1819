@@ -7,12 +7,11 @@ Pedro Almeida - 46401
 */
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #include <errno.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <stdio.h>
 
-#include "message.h"
 #include "message-private.h"
 
 #include "base64.c"
@@ -284,7 +283,10 @@ struct message_t *buffer_to_message(char *msg_buf, int msg_size){
 				return NULL;
 			}
 
-			base64_decode(msg_buf, ks, m->content.value->data, &ks);
+			if(m->content.value->datasize == 0)
+				m->content.value->data = NULL;
+			else
+				base64_decode(msg_buf, ks, m->content.value->data, (size_t *)&ks);
 			return m;
 		case CT_ENTRY:
 			ss = ntohs(*(short *) msg_buf);
@@ -303,7 +305,7 @@ struct message_t *buffer_to_message(char *msg_buf, int msg_size){
 				free(m);
 				return NULL;
 			}
-			base64_decode(msg_buf, ks, d->data, &ks);
+			base64_decode(msg_buf, ks, d->data, (size_t *)&ks);
 			//memcpy(d->data, msg_buf, ks);
 			m->content.entry = (struct entry_t *)malloc(sizeof(struct entry_t));
 			if (m->content.entry == NULL){
@@ -340,3 +342,36 @@ struct message_t *buffer_to_message(char *msg_buf, int msg_size){
 	return NULL;
 }
 
+void print_message(struct message_t *msg) {
+    int i;
+
+    printf("\n----- MESSAGE -----\n");
+    printf("opcode: %d, c_type: %d\n", msg->opcode, msg->c_type);
+    switch(msg->c_type) {
+        case CT_ENTRY:{
+
+            printf("key: %s\n", msg->content.entry->key);
+            printf("data: %s\n", (char *)msg->content.entry->value->data);
+            printf("datasize: %d\n", msg->content.entry->value->datasize);
+        }break;
+        case CT_KEY:{
+            printf("key: %s\n", msg->content.key);
+        }break;
+        case CT_KEYS:{
+            for(i = 0; msg->content.keys[i] != NULL; i++) {
+                printf("key[%d]: %s\n", i, msg->content.keys[i]);
+            }
+        }break;
+        case CT_VALUE:{
+            printf("datasize: %d\n", msg->content.value->datasize);
+            printf("data: %s\n", (char *)msg->content.value->data);
+        }break;
+        case CT_RESULT:{
+            printf("result: %d\n", msg->content.result);
+        }break;
+        case OP_ERROR:{
+            printf("result: %d\n", msg->content.result);
+        };
+    }
+    printf("-------------------\n");
+}
