@@ -63,21 +63,21 @@ int network_server_init(short port){
  * - Enviar a resposta ao cliente usando a função network_send.
  */
 int network_main_loop(int listening_socket){
-	int connSock;
+	int connSock, runserver;
 	struct message_t* msg;
 	struct sockaddr_in client;
   	socklen_t size_client;
   	printf("Server up...\n");
 
 	while((connSock = accept(listening_socket, (struct sockaddr *) &client, &size_client)) != -1){
-		while(1){
+		runserver = 1;
+		while(runserver){
 			if ((msg = network_receive(connSock)) == NULL) {
-				break;
+				runserver = 0;
 			}else if(network_send(connSock, msg) == -1){
-				break;
+				runserver = 0;
 			}
 		}
-		break;
 	}
 	printf("Closing...\n");
 	network_server_close();	
@@ -94,7 +94,7 @@ struct message_t *network_receive(int client_socket){
 	int message_size, msg_size, result;
 	struct message_t *msg_pedido;
 
-	
+
 	/* Verificar parâmetros de entrada */
 	if (client_socket < 0){
 		printf("Estrutura de entrada invalida");

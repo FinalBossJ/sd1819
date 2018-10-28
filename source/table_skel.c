@@ -117,13 +117,13 @@ int invoke(struct message_t *msg){
 	    }break;
 	  }
 	}
-
-	if (result < 0) {
-		msg_resposta->opcode = OP_ERROR;
-		msg_resposta->c_type = CT_RESULT;
-	}else if(done == 0){
+	if(done == 0){
 		msg_resposta->opcode = OP_ERROR;
 		msg_resposta->c_type = CT_NONE;
+	}else if (result < 0) {
+		msg_resposta->opcode = OP_ERROR;
+		msg_resposta->c_type = CT_RESULT;
+		msg_resposta->content.result = -1;
 	}
 	return 0;
 }
