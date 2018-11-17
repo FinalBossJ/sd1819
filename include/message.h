@@ -28,7 +28,10 @@
 #define CT_KEYS   40
 #define CT_RESULT 50
 /* Opcode representativo de inexistência de content (e.g., getkeys e size */
-#define CT_NONE   60  
+#define CT_NONE   60 
+
+//Tempo de tolerancia
+#define RETRY_TIME 5
 
 
 /* Estrutura que representa uma mensagem genérica a ser transmitida.

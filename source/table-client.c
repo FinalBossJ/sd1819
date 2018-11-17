@@ -1,10 +1,11 @@
 /*
 SD 2018/2019
-Projecto 2 - Grupo 32
+Projecto 3 - Grupo 32
 Sandro Correia - 44871
 Diogo Catarino - 44394
 Pedro Almeida - 46401
 */
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
@@ -103,34 +104,91 @@ int main(int argc, char **argv){
             }
 
             if(rtable_put(rtable, entry) == -1){
-            	entry_destroy(entry);
-                break;
+                printf("Tentando reconectar ao servidor...\n");
+                sleep(RETRY_TIME);
+                rtable = rtable_connect(address_port);
+                //Verificar se a associacao foi bem estabelecida
+                if(rtable == NULL){
+                    printf("Ocorreu um erro no estabelecimento da associacao entre o cliente e a tabela remota.\n");
+                    break;
+                }
+                printf("Reconexao ao servidor efectuada com sucesso!\n");
+                if(rtable_put(rtable, entry) == -1){
+                    entry_destroy(entry);
+                    break;
+                }
             }
 
         //get <key>  
         }else if(strncmp(command, "get", 3) == 0 && nArgs == 1) {
             char *key = strtok(NULL, " "); 
             if(rtable_get(rtable, key) == NULL){
-                printf("Benfica\n");
-                break;
+                printf("Tentando reconectar ao servidor...\n");
+                sleep(RETRY_TIME);
+                rtable = rtable_connect(address_port);
+                //Verificar se a associacao foi bem estabelecida
+                if(rtable == NULL){
+                    printf("Ocorreu um erro no estabelecimento da associacao entre o cliente e a tabela remota.\n");
+                    break;
+                }
+                printf("Reconexao ao servidor efectuada com sucesso!\n");
+                if(rtable_get(rtable, key) == NULL){
+                    break;
+                }
             }
 
         //del <key>  
         }else if(strncmp(command, "del", 3) == 0 && nArgs == 1) {
             char *key = strtok(NULL, " "); 
-            if(rtable_del(rtable, key) == -1)
-                break;
+            if(rtable_del(rtable, key) == -1){
+                printf("Tentando reconectar ao servidor...\n");
+                sleep(RETRY_TIME);
+                rtable = rtable_connect(address_port);
+                //Verificar se a associacao foi bem estabelecida
+                if(rtable == NULL){
+                    printf("Ocorreu um erro no estabelecimento da associacao entre o cliente e a tabela remota.\n");
+                    break;
+                }
+                printf("Reconexao ao servidor efectuada com sucesso!\n");
+                if(rtable_del(rtable, key) == -1){
+                    break;
+                }
+            }
 
         //size
         } else if(strncmp(command, "size", 4) == 0 && nArgs == 0) {
-            if(rtable_size(rtable)==-1)
-                break;
+            if(rtable_size(rtable)==-1){
+                printf("Tentando reconectar ao servidor...\n");
+                sleep(RETRY_TIME);
+                rtable = rtable_connect(address_port);
+                //Verificar se a associacao foi bem estabelecida
+                if(rtable == NULL){
+                    printf("Ocorreu um erro no estabelecimento da associacao entre o cliente e a tabela remota.\n");
+                    break;
+                }
+                printf("Reconexao ao servidor efectuada com sucesso!\n");
+                if(rtable_size(rtable)==-1){
+                    break;
+                }
+            }
             
         //getkeys
         }else if(strncmp(command, "getkeys", 7) == 0 && nArgs == 0) {
             char **keys;
-            if((keys = rtable_get_keys(rtable)) == NULL)
-                break;
+            if((keys = rtable_get_keys(rtable)) == NULL){
+                printf("Tentando reconectar ao servidor...\n");
+                sleep(RETRY_TIME);
+                rtable = rtable_connect(address_port);
+                //Verificar se a associacao foi bem estabelecida
+                if(rtable == NULL){
+                    printf("Ocorreu um erro no estabelecimento da associacao entre o cliente e a tabela remota.\n");
+                    break;
+                }
+                printf("Reconexao ao servidor efectuada com sucesso!\n");
+                if((keys = rtable_get_keys(rtable)) == NULL){
+                   break;
+                }
+            }
 
 
         }else{ 
@@ -146,6 +204,7 @@ int main(int argc, char **argv){
         printf("######################\n");
         }
     }
+
   	return rtable_disconnect(rtable);
 }
 

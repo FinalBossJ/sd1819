@@ -14,7 +14,6 @@ FLAGS = -Wall -I $(IDIR)
 
 CC = gcc
 
-deps_test_message = $(ODIR)/test_message.o $(ODIR)/data.o $(ODIR)/entry.o $(ODIR)/table.o $(ODIR)/list.o $(ODIR)/message.o 
 deps_table-client = $(ODIR)/table-client.o $(ODIR)/network_client.o $(ODIR)/data.o $(ODIR)/entry.o $(ODIR)/table.o $(ODIR)/list.o $(ODIR)/message.o $(ODIR)/client_stub.o 
 deps_table-server = $(ODIR)/table-server.o $(ODIR)/network_server.o $(ODIR)/table_skel.o $(ODIR)/data.o $(ODIR)/entry.o $(ODIR)/table.o $(ODIR)/list.o $(ODIR)/message.o 
 
@@ -31,11 +30,6 @@ table-server : $(BDIR)/table-server
 $(BDIR)/table-server : $(deps_table-server)
 	$(CC) -o $@ $^
 
-
-test_message : $(BDIR)/test_message
-
-$(BDIR)/test_message : $(deps_test_message)
-	$(CC) -o $@ $^
 
 $(ODIR)/%.o : $(SDIR)/%.c
 	$(CC) -c $< -o $@ $(FLAGS)
