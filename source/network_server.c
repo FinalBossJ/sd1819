@@ -1,15 +1,19 @@
 /*
 SD 2018/2019
-Projecto 2 - Grupo 32
+Projecto 3 - Grupo 32
 Sandro Correia - 44871
 Diogo Catarino - 44394
 Pedro Almeida - 46401
 */
 
+#define NFDESC 4 // Número de sockets (uma para listening)
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <poll.h>
+#include <fcntl.h>
 
 #include "message-private.h"
 #include "table_skel.h"
@@ -63,22 +67,74 @@ int network_server_init(short port){
  * - Enviar a resposta ao cliente usando a função network_send.
  */
 int network_main_loop(int listening_socket){
-	int connSock, runserver;
+	int nfds, kfds, i;
+	struct pollfd connections[NFDESC]; // Estrutura para file descriptors das sockets das ligações
 	struct message_t* msg;
 	struct sockaddr_in client;
   	socklen_t size_client;
   	printf("Server up...\n");
 
-	while((connSock = accept(listening_socket, (struct sockaddr *) &client, &size_client)) != -1){
-		runserver = 1;
-		while(runserver){
-			if ((msg = network_receive(connSock)) == NULL) {
-				runserver = 0;
-			}else if(network_send(connSock, msg) == -1){
-				runserver = 0;
-			}
-		}
-	}
+	for (i = 0; i < NFDESC; i++)
+    	connections[i].fd = -1;    // poll ignora estruturas com fd < 0
+	connections[0].fd = listening_socket;  // Vamos detetar eventos na welcoming socket
+	connections[0].events = POLLIN;  // Vamos esperar ligações nesta socket
+
+	nfds = 1; // número de file descriptors
+
+	static int pool[NFDESC]; //pool de sockets
+	pool[0] = 1; //listening socket esta sempre reservado
+
+
+
+  // Retorna assim que exista um evento ou que TIMEOUT expire. * FUNÇÂO POLL *.
+  while ((kfds = poll(connections, NFDESC, 10)) >= 0) // kfds == 0 significa timeout sem eventos
+    if (kfds > 0){
+      
+      if ((connections[0].revents & POLLIN) && (nfds < NFDESC)){  // Pedido na listening socket ?
+  
+        //Arranjar uma socket livre da pool
+       int openSocket = 0;
+        for(i = 1; i < NFDESC && openSocket == 0; i++){
+          if(pool[i] == 0){
+            openSocket = i;
+          }
+        }
+        if ((connections[openSocket].fd = accept(connections[0].fd, (struct sockaddr *) &client, &size_client)) > 0){ // Ligação feita ?
+          connections[openSocket].events = POLLIN; // Vamos esperar dados nesta socket
+          nfds++;
+          pool[openSocket] = 1;
+
+        }
+      }
+      for (i = 1; i < NFDESC; i++){// Todas as ligações
+        //Se a socket estiver a ser utilizada
+        if(pool[i] == 1){
+        if (connections[i].revents & POLLIN) { //Dados para ler?
+          
+          
+              if ((msg = network_receive(connections[i].fd)) == NULL) {
+                  printf("Ligacao terminada com um cliente.\n");
+                  close(connections[i].fd);
+                  connections[i].fd = -1;
+                  nfds--;
+                  pool[i] = 0;
+              }else if((network_send(connections[i].fd, msg)) == -1){
+              	printf("Ligacao terminada com um cliente.\n");
+                  close(connections[i].fd);
+                  connections[i].fd = -1;
+                  nfds--;
+                  pool[i] = 0;
+              }
+            
+        }
+      }
+      }
+    }
+    for (i = 1; i < nfds; i++){
+      close(connections[i].fd);
+      connections[i].fd = -1;
+    }
+
 	printf("Closing...\n");
 	network_server_close();	
 	return 0;	
