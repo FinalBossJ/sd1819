@@ -15,9 +15,9 @@ FLAGS = -Wall -I $(IDIR)
 CC = gcc
 
 deps_table-client = $(ODIR)/table-client.o $(ODIR)/network_client.o $(ODIR)/data.o $(ODIR)/entry.o $(ODIR)/table.o $(ODIR)/list.o $(ODIR)/message.o $(ODIR)/client_stub.o 
-deps_table-server = $(ODIR)/table-server.o $(ODIR)/network_server.o $(ODIR)/table_skel.o $(ODIR)/data.o $(ODIR)/entry.o $(ODIR)/table.o $(ODIR)/list.o $(ODIR)/message.o 
+deps_table-server = $(ODIR)/table-server.o $(ODIR)/network_server.o $(ODIR)/table_skel.o $(ODIR)/persistence_manager.o $(ODIR)/data.o $(ODIR)/entry.o $(ODIR)/table.o $(ODIR)/list.o $(ODIR)/message.o 
 
-all: make_folders clean test_message table-client table-server
+all: make_folders clean table-client table-server
 
 
 table-client : $(BDIR)/table-client

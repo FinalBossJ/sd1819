@@ -38,22 +38,22 @@ int pmanager_have_data(struct pmanager_t *pmanager);
  * Retorna o número de bytes escritos no log ou -1 no caso do ficheiro 
  * já não ter espaço suficiente para registar a operação.
  */
-int pmanager_log(struct pmanager_t *pmanager, message_t *op);
+int pmanager_log(struct pmanager_t *pmanager, struct message_t *op);
 
 /* Cria um ficheiro filename+".stt" com o estado de table. 
- * Retorna o tamanho do ficheiro criado ou -1 em caso de erro.
- */
+ * Retorna o tamanho do ficheiro criado ou -1 em caso de erro.*/
+ 
 int pmanager_store_table(struct pmanager_t *pmanager, 
                          struct table_t *table);
 
 /* Limpa o ficheiro ".log" e copia o ficheiro ".stt" para ".ckp". 
- * Retorna 0 se tudo correr bem ou -1 em caso de erro.
- */
+ * Retorna 0 se tudo correr bem ou -1 em caso de erro.*/
+ 
 int pmanager_rotate_log(struct pmanager_t *pmanager);
 
 /* Mete o estado contido nos ficheiros .log, .stt e/ou .ckp na tabela 
- * passada como argumento. Retorna 0 (ok) ou -1 em caso de erro.
- */
+ * passada como argumento. Retorna 0 (ok) ou -1 em caso de erro.*/
+ 
 int pmanager_fill_state(struct pmanager_t *pmanager, 
                         struct table_t *table);
 #endif
