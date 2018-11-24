@@ -1,6 +1,6 @@
 /*
 SD 2018/2019
-Projecto 2 - Grupo 32
+Projecto 3 - Grupo 32
 Sandro Correia - 44871
 Diogo Catarino - 44394
 Pedro Almeida - 46401
@@ -12,8 +12,9 @@ Pedro Almeida - 46401
 
 #include "message-private.h"
 #include "table-private.h"
+#include "persistent_table-private.h"
 
-struct table_t* table;
+struct ptable_t* ptable;
 
 /* Inicia o skeleton da tabela.
  * O main() do servidor deve chamar esta função antes de poder usar a
@@ -21,19 +22,37 @@ struct table_t* table;
  * serem usadas pela tabela mantida no servidor.
  * Retorna 0 (OK) ou -1 (erro, por exemplo OUT OF MEMORY)
  */
-int table_skel_init(int n_lists){
+int table_skel_init(int n_lists, char *filename, int logsize){
 	if(n_lists <= 0)
 		return -1;
-	table = table_create(n_lists);
+	struct table_t* table = table_create(n_lists);
 	if(table == NULL)
 		return -1;
+
+	struct pmanager_t* pmanager = pmanager_create(filename, logsize);
+	if(pmanager == NULL)
+		return -1;
+
+
+	ptable = ptable_create(table, pmanager);
+
+	if(pmanager_have_data(pmanager) == 1){
+		printf("Encontrados dados, tentando reconstruir tabela...\n");
+		if(pmanager_fill_state(pmanager, table) == -1){
+			printf("Erro ao reconstruir a tabela.\n");
+			return -1;
+		}
+		printf("Tabela reconstruida com sucesso!\n");
+	}else{
+		printf("Nao foram encontrados dados, criando uma tabela nova com %d listas.\n", n_lists);
+	}
     return 0;
 }
 
 /* Liberta toda a memória e recursos alocados pela função table_skel_init.
  */
 void table_skel_destroy(){
-	table_destroy(table);
+	ptable_destroy(ptable);
 }
 
 /* Executa uma operação na tabela (indicada pelo opcode contido em msg)
@@ -44,7 +63,7 @@ int invoke(struct message_t *msg){
 	struct message_t *msg_resposta;
 	int result = 0, done = 0;
 	/* Verificar parâmetros de entrada */
-	if (msg == NULL || table == NULL){
+	if (msg == NULL || ptable == NULL){
 		return -1;
 	}
 
@@ -64,7 +83,7 @@ int invoke(struct message_t *msg){
 	      }else{
 	        char* key = strdup(msg->content.entry->key);
 	        struct data_t* value = data_dup(msg->content.entry->value);
-	        result = table_put(table, key, value);
+	        result = ptable_put(ptable, key, value);
 	        msg_resposta->c_type = CT_NONE;
 	        done = 1;
 	      }
@@ -75,7 +94,7 @@ int invoke(struct message_t *msg){
 	        msg_resposta->c_type = CT_NONE;
 	      }else{
 	        msg_resposta->c_type = CT_VALUE;
-	        msg_resposta->content.value = table_get(table, msg->content.key);
+	        msg_resposta->content.value = ptable_get(ptable, msg->content.key);
 	        /*Note que o caso em que uma chave não é encontrada no get não deve ser considerado
 				como erro. Neste caso o servidor deve responder com uma resposta normal
 				(OP_GET+1) mas definindo um data_t com size=0 e data=NULL.
@@ -91,7 +110,7 @@ int invoke(struct message_t *msg){
 	        msg_resposta->c_type = CT_NONE;
 	      }else{
 	        msg_resposta->c_type = CT_NONE;
-	        result = table_del(table, msg->content.key);
+	        result = ptable_del(ptable, msg->content.key);
 	     	done = 1;
 	    }
 	    }break;
@@ -100,7 +119,7 @@ int invoke(struct message_t *msg){
 		        msg_resposta->opcode = OP_ERROR;
 		        msg_resposta->c_type = CT_NONE;
 	      }else{
-		      result = table_size(table);
+		      result = ptable_size(ptable);
 		      msg_resposta->c_type = CT_RESULT;
 		      msg_resposta->content.result = result;
 		      done = 1;
@@ -111,7 +130,7 @@ int invoke(struct message_t *msg){
 	        msg_resposta->c_type = CT_NONE;
 	      }else{
 	        msg_resposta->c_type = CT_KEYS;
-	        msg_resposta->content.keys = table_get_keys(table);
+	        msg_resposta->content.keys = ptable_get_keys(ptable);
 	        done = 1;
 	      }
 	    }break;

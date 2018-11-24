@@ -96,6 +96,17 @@ int pmanager_have_data(struct pmanager_t *pmanager){
 		fclose(fp2);
 	}
 
+	FILE *fp3 = fopen(pmanager->sttname, "r");
+	if(fp3 != NULL){	
+		fseek(fp3, 0, SEEK_END);
+
+		if(ftell(fp3) > 0){
+			fclose(fp3);
+			return 1;
+		}
+		fclose(fp3);
+	}
+
 	return 0;
 }
 
@@ -106,30 +117,36 @@ int pmanager_have_data(struct pmanager_t *pmanager){
  * já não ter espaço suficiente para registar a operação.
  */
 int pmanager_log(struct pmanager_t *pmanager, struct message_t *op){
-	if(pmanager == NULL || op == NULL)
+	if(pmanager == NULL || op == NULL){
 		return -1;
+	}
 
-	int size;
+	int size, msgSize;
 	char message[1024];
 
 	switch(op->opcode) {
 	    case OP_PUT:{
-	    	sprintf(message, "put %s %s\n", op->content.entry->key, (char *)op->content.entry->value->data);
+	    	msgSize = sprintf(message, "put %s %s\n", op->content.entry->key, (char *)op->content.entry->value->data);
 	    }break;
 	    case OP_DEL:{
-	     	sprintf(message, "del %s\n", op->content.entry->key);
+	     	msgSize = sprintf(message, "del %s\n", op->content.key);
 	    }break;
 	  }
 	
-	struct stat st;
-	stat(pmanager->logname, &st);
-	size = st.st_size;
+	if( access( pmanager->logname, F_OK ) != -1 ) {
+   		struct stat st;
+		stat(pmanager->logname, &st);
+		size = st.st_size;
+	} else {
+	    size = 0;
+	}
 
-	if(size + sizeof(message) <= pmanager->logsize){
+	if(size + msgSize <= pmanager->logsize){
 		FILE *fp = fopen(pmanager->logname, "a");
 		
-		if(fp == NULL)
+		if(fp == NULL){
 			return -1;
+		}
 
 		if(fprintf(fp, "%s" ,message) <= 0){
 			fclose(fp);
@@ -148,12 +165,12 @@ int pmanager_log(struct pmanager_t *pmanager, struct message_t *op){
 int pmanager_store_table(struct pmanager_t *pmanager, struct table_t *table){
 	if(pmanager == NULL || table == NULL)
 		return -1;
-	FILE *fp = fopen(pmanager->sttname, "w");
+	FILE *fp = fopen(pmanager->sttname, "w+");
 	int size, i;
 	char** keys = table_get_keys(table);
 
 	for(i = 0; keys[i] != NULL; i++) {
-		if(fprintf(fp, "put %s %s\n", keys[i], (char *)table_get(table, keys[i])) <= 0){
+		if(fprintf(fp, "put %s %s\n", keys[i], (char *)table_get(table, keys[i])->data) <= 0){
 			fclose(fp);
 			return -1;
 		}
@@ -175,8 +192,13 @@ int pmanager_rotate_log(struct pmanager_t *pmanager){
 	if(pmanager == NULL)
 		return -1;
 
-	if(remove(pmanager->logname) == -1)
-		return -1;
+	if( access(pmanager->logname, F_OK ) != -1 ) {
+   		if(remove(pmanager->logname) == -1)
+			return -1;
+	}
+
+	if(access(pmanager->sttname, F_OK) == -1) 
+		return 0;
 
 	int i;
 	FILE *fp1 = fopen(pmanager->sttname, "r");
@@ -205,78 +227,59 @@ int pmanager_fill_state(struct pmanager_t *pmanager, struct table_t *table){
 	if(pmanager == NULL || table == NULL)
 		return -1;
 	
-	/* Int a determinar qual ficheiro ler
-	* 0 = nenhum
-	* 1 = stt
-	* 2 = ckp
-	* 3 = log
-	*/
-	int bkp = 0;
+	int log = 1;
 
-	FILE *fp = fopen(pmanager->sttname, "r");
-	if(fp != NULL){	
-		fseek(fp, 0, SEEK_END);
-
-		if(ftell(fp) > 0){
-			bkp = 1;
-		}else{
-			fclose(fp);
-		}
-	}
-	if(bkp != 0){
+	FILE *fp;
+	if(access(pmanager->ckpname, F_OK) != -1) 
 		fp = fopen(pmanager->ckpname, "r");
-		if(fp != NULL){	
-			fseek(fp, 0, SEEK_END);
-
-			if(ftell(fp) > 0){
-				bkp = 2;
-			}else{
-				fclose(fp);
-			}
-		}
-	}
-	if(bkp != 0){
+	else if(access(pmanager->sttname, F_OK) != -1)
+		fp = fopen(pmanager->sttname, "r");
+	else{
+		log = 0;
 		fp = fopen(pmanager->logname, "r");
-		if(fp != NULL){	
-			fseek(fp, 0, SEEK_END);
-
-			if(ftell(fp) > 0){
-				bkp = 3;
-			}else{
-				fclose(fp);
-			}
-		}
 	}
-
-	if(bkp == 0)
-		return 0;
-	rewind(fp);
-
+	
+	if(fp == NULL)
+		return -1;
 
 	char* line = NULL;
 	size_t len = 0;
-	while (getline(&line, &len, fp) != -1) {
-         char* command = strtok(line, " ");
-         if(strncmp(command, "put", 3) == 0){
-         	struct data_t *value;
-            char *key = strtok(NULL, " ");
-            char* data = strtok(NULL, "");
-            if((value = data_create2(sizeof(data), data)) == NULL) {
-                free(value);
-                return -1;
-            }
 
-            if(table_put(table, key, value) == -1){
-            	free(value);
-            	return -1;
-            }
-         }else if(strncmp(command, "del", 3) == 0){
-         	char *key = strtok(NULL, " ");
-         	if(table_del(table, key) == -1){
-         		return -1;
-         	}
-         }
-    }
+
+	while(log != -1){
+		while (getline(&line, &len, fp) != -1) {
+	         char* command = strtok(line, " ");
+	         if(strncmp(command, "put", 3) == 0){
+	         	struct data_t *value;
+	            char *key = strtok(NULL, " ");
+	            char* data = strtok(NULL, "");
+	            if((value = data_create2(sizeof(data), data)) == NULL) {
+	                free(value);
+	                return -1;
+	            }
+
+	            if(table_put(table, key, value) == -1){
+	            	free(value);
+	            	return -1;
+	            }
+	         }else if(strncmp(command, "del", 3) == 0){  
+	         	char *key = strtok(NULL, "");
+	         	int len = strlen(key);
+	         	if(key[len-1] == '\n')
+	         		key[len-1] = 0;
+	         	if(table_del(table, key) == -1){
+	         		return -1;
+	         	}
+	         }
+	    }
+	    log--;
+	    if(log == 0)
+	    	if(access(pmanager->logname, F_OK) != -1)
+		    	if((fp = fopen(pmanager->logname, "r")) == NULL)
+		    		return -1;
+	    
+	}
+
 
     return 0;
 }

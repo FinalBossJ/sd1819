@@ -87,8 +87,9 @@ int list_add(struct list_t *list, struct entry_t *entry){
 * Retorna 0 (OK) ou -1 (erro).
  */
 int list_remove(struct list_t* list, char* key){
-	if (list == NULL || key == NULL)
+	if (list == NULL || key == NULL){
 		return -1;
+	}
 	
 	struct node_t* current = list->first;
 	struct node_t* before = NULL;

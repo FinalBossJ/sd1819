@@ -173,10 +173,10 @@ int main(int argc, char **argv){
             }
             
         //getkeys
-        }else if(strncmp(command, "getkeys", 7) == 0 && nArgs == 0) {
+        }else if(strncmp(command, "getkeys", 7) == 0 && nArgs == 0) { 
             char **keys;
             if((keys = rtable_get_keys(rtable)) == NULL){
-                printf("Tentando reconectar ao servidor...\n");
+                printf("Tentando reconectar ao servidor...\n"); 
                 sleep(RETRY_TIME);
                 rtable = rtable_connect(address_port);
                 //Verificar se a associacao foi bem estabelecida

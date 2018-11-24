@@ -15,6 +15,8 @@ Pedro Almeida - 46401
 #include "network_server.h"
 #include "table_skel.h"
 
+int logsize = 50;
+
 /*
    Programa que implementa um servidor de uma tabela hash com chainning.
    Uso: table-server <port> <n_lists>
@@ -28,9 +30,9 @@ int main(int argc, char **argv){
 	signal(SIGPIPE, SIG_IGN);
 
 	/* Testar os argumentos de entrada */
-	if (argc != 3){
-		printf("Uso: ./table-server <port> <n_lists>\n");
-		printf("Exemplo de uso: ./table-server 54321 6\n");
+	if (argc != 4){
+		printf("Uso: ./table-server <port> <n_lists> <nome_ficheiro>\n");
+		printf("Exemplo de uso: ./table-server 54321 6 servidorSeguro\n");
 		return -1;
 	}
 
@@ -42,7 +44,9 @@ int main(int argc, char **argv){
 
 	int n_lists = atoi(argv[2]);
 	
-	if(table_skel_init(n_lists) != -1){
+
+
+	if(table_skel_init(n_lists, argv[3], logsize) != -1){
 		
 		network_main_loop(listening_socket);
 

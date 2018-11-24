@@ -210,7 +210,7 @@ char **rtable_get_keys(struct rtable_t *rtable){
         printf("A RECEBER:\n");
         print_message(message_received);
     }
-	if (message_received->opcode != OP_GETKEYS + 1) {
+	if (message_received == NULL || message_received->opcode != OP_GETKEYS + 1) {
 		free(msg);
 		free_message(message_received);
 		return NULL;

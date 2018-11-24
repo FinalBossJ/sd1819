@@ -160,7 +160,7 @@ int table_del(struct table_t* table, char* key){
     if (hash == -1)
         return -1;
 
-    return list_remove(table->head[hash], key);
+    return list_remove(table->head[hash], key);  //<- culprit
 }
 
 
