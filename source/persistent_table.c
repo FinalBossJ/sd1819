@@ -66,10 +66,10 @@ int ptable_put(struct ptable_t *ptable, char *key, struct data_t *data){
 	msg->content.entry->value = data_dup(data);
 
 	if(pmanager_log(ptable->pmanager, msg) == -1){
-		if(pmanager_rotate_log(ptable->pmanager) == -1)
+		if(pmanager_store_table(ptable->pmanager, ptable->table) == -1)
 			return -1;
 
-		if(pmanager_store_table(ptable->pmanager, ptable->table) == -1)
+		if(pmanager_rotate_log(ptable->pmanager) == -1)
 			return -1;
 	}
 	return 0;
@@ -105,10 +105,10 @@ int ptable_del(struct ptable_t *ptable, char *key){
 	msg->content.key = strdup(key);
 
 	if(pmanager_log(ptable->pmanager, msg) == -1){
-		if(pmanager_rotate_log(ptable->pmanager) == -1)
-			return -1;
-
 		if(pmanager_store_table(ptable->pmanager, ptable->table) == -1)
+			return -1;
+		
+		if(pmanager_rotate_log(ptable->pmanager) == -1)
 			return -1;
 	}
 
