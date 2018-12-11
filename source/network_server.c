@@ -1,12 +1,12 @@
 /*
 SD 2018/2019
-Projecto 3 - Grupo 32
+Projecto 4 - Grupo 32
 Sandro Correia - 44871
 Diogo Catarino - 44394
 Pedro Almeida - 46401
 */
 
-#define NFDESC 4 // Número de sockets (uma para listening)
+#define NFDESC 1001 // Número de sockets (uma para listening) e threads
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,12 +14,43 @@ Pedro Almeida - 46401
 #include <unistd.h>
 #include <poll.h>
 #include <fcntl.h>
+#include <pthread.h>
 
 #include "message-private.h"
 #include "table_skel.h"
 #include "network_server.h"
 
 int global_socket;
+static int pool[NFDESC]; //pool de sockets
+int nfds;
+pthread_mutex_t dados = PTHREAD_MUTEX_INITIALIZER;
+struct pollfd connections[NFDESC]; // Estrutura para file descriptors das sockets das ligações
+
+void* thread_main(void* params){
+	int i = *((int *)params);
+	struct message_t* msg;
+    while(1)
+	    if (connections[i].revents & POLLIN) { //Dados para ler?
+	    
+          if ((msg = network_receive(connections[i].fd)) == NULL) {
+              printf("Ligacao terminada com um cliente.\n");
+              close(connections[i].fd);
+              connections[i].fd = -1;
+              nfds--;
+              pool[i] = 0;
+              break;
+          }else if((network_send(connections[i].fd, msg)) == -1){
+      		  printf("Ligacao terminada com um cliente.\n");
+              close(connections[i].fd);
+              connections[i].fd = -1;
+              nfds--;
+              pool[i] = 0;
+              break;
+          }
+        
+    }
+  return 0;
+}
 
 /* Função para preparar uma socket de receção de pedidos de ligação
  * num determinado porto.
@@ -67,9 +98,7 @@ int network_server_init(short port){
  * - Enviar a resposta ao cliente usando a função network_send.
  */
 int network_main_loop(int listening_socket){
-	int nfds, kfds, i;
-	struct pollfd connections[NFDESC]; // Estrutura para file descriptors das sockets das ligações
-	struct message_t* msg;
+	int kfds, i;
 	struct sockaddr_in client;
   	socklen_t size_client;
   	printf("Server up...\n");
@@ -81,7 +110,7 @@ int network_main_loop(int listening_socket){
 
 	nfds = 1; // número de file descriptors
 
-	static int pool[NFDESC]; //pool de sockets
+	pthread_t threads[NFDESC];
 	pool[0] = 1; //listening socket esta sempre reservado
 
 
@@ -103,31 +132,16 @@ int network_main_loop(int listening_socket){
           connections[openSocket].events = POLLIN; // Vamos esperar dados nesta socket
           nfds++;
           pool[openSocket] = 1;
-
+          //Criar thread
+          int *arg = malloc(sizeof(*arg));
+          if(arg == NULL)
+          	break;
+          *arg = openSocket;
+          if (pthread_create(&threads[openSocket], NULL, &thread_main, arg ) != 0){
+                printf("Ocorreu um erro na criacao das threads.\n");
+                break;
+            }
         }
-      }
-      for (i = 1; i < NFDESC; i++){// Todas as ligações
-        //Se a socket estiver a ser utilizada
-        if(pool[i] == 1){
-        if (connections[i].revents & POLLIN) { //Dados para ler?
-          
-          
-              if ((msg = network_receive(connections[i].fd)) == NULL) {
-                  printf("Ligacao terminada com um cliente.\n");
-                  close(connections[i].fd);
-                  connections[i].fd = -1;
-                  nfds--;
-                  pool[i] = 0;
-              }else if((network_send(connections[i].fd, msg)) == -1){
-              	printf("Ligacao terminada com um cliente.\n");
-                  close(connections[i].fd);
-                  connections[i].fd = -1;
-                  nfds--;
-                  pool[i] = 0;
-              }
-            
-        }
-      }
       }
     }
     for (i = 1; i < nfds; i++){
@@ -218,10 +232,10 @@ int network_send(int client_socket, struct message_t *msg){
 		printf("Erro: Estrutura de entrada invalida");
 		return -1;
 	}
-
+	pthread_mutex_lock(&dados);
 	if(msg == NULL || invoke(msg) == -1) //Where the magic is done
 		return -1;
-
+	pthread_mutex_unlock(&dados);
 	//Verificar se o socket ainda esta aberto
 	char buffer[32];
 	if(recv(client_socket, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT) == 0){

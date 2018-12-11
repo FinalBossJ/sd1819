@@ -1,6 +1,6 @@
 /*
 SD 2018/2019
-Projecto 3 - Grupo 32
+Projecto 4 - Grupo 32
 Sandro Correia - 44871
 Diogo Catarino - 44394
 Pedro Almeida - 46401
@@ -10,9 +10,78 @@ Pedro Almeida - 46401
 #include <stdio.h>
 #include <signal.h>
 #include <string.h>
+#include <pthread.h>
+#include <sys/time.h>
 
 #include "client_stub-private.h"
 #include "network_client-private.h"
+
+//*************************************************************
+//Variaveis globais
+char* address_port;
+int nOp = 0; //Numero total de operacoes concluidas pelo conjunto de threads
+long totLat = 0; //Latencia total de todas as operacoes concluidas (totLat/nOp = latencia media de cada operacao concluida)
+char* mode; //Modo automatico (p para escrita; g para leitura)
+
+pthread_mutex_t dados = PTHREAD_MUTEX_INITIALIZER;
+//*************************************************************
+
+void* thread_main(void* params){
+    struct rtable_t *rtable;
+    /* Iniciar instância do stub e Usar rtable_connect para estabelcer ligação ao servidor*/
+    pthread_mutex_lock(&dados);
+    rtable = rtable_connect(address_port);
+    pthread_mutex_unlock(&dados);
+
+    //Verificar se a associacao foi bem estabelecida
+    if(rtable == NULL){
+        return (void *) -1;
+    }
+
+    
+  //ciclo da thread:
+  while(1){
+    pthread_mutex_lock(&dados);
+    struct timeval before, after;
+    
+            if(strcmp(mode, "p") == 0){
+                nOp++;
+                struct data_t *value;
+                struct entry_t *entry;
+                char* key = (char *)malloc(sizeof(int)+1);
+                sprintf(key, "%d", nOp);
+                char* data = (char *)malloc(sizeof(int)+1);
+                sprintf(data, "%d", getpid());
+                if((value = data_create2(sizeof(data), data)) == NULL) {
+                    free(value);
+                    return (void *)-1;
+                }
+
+                if((entry = entry_create(key, value)) == NULL){
+                    data_destroy(value);
+                    return (void *)-1;
+                }
+                gettimeofday(&before, 0);
+                if(rtable_put(rtable, entry) == -1){
+                    entry_destroy(entry);
+                    return (void *)-1;
+                }
+                gettimeofday(&after, 0);
+            }else if(strcmp(mode, "g") == 0){
+                nOp++;
+                char* key = (char *)malloc(sizeof(int)+1);
+                sprintf(key, "%d", nOp);
+                gettimeofday(&before, 0);
+                if(rtable_get(rtable, key) == NULL){
+                    return (void *)-1;
+                }
+                gettimeofday(&after, 0);
+            }
+    totLat = (after.tv_sec-before.tv_sec)*1000000 + after.tv_usec-before.tv_usec;
+    pthread_mutex_unlock(&dados);
+  }
+  return 0;
+}
 
 /*
 	Programa cliente para manipular tabela de hash remota.
@@ -25,20 +94,53 @@ int main(int argc, char **argv){
 	struct rtable_t *rtable;
 
 	char input[81];
-    char* address_port;
 
     //Usar a função signal() para ignorar sinais do tipo SIGPIPE
     signal(SIGPIPE, SIG_IGN);
 
 	/* Testar os argumentos de entrada */
-	if (argc != 2){
+	if (argc != 2 && argc != 5){
         printf("Uso: ./table_client <ip_servidor>:<porto_servidor>\n");
+        printf("Modo automatico de escrita: ./table_client <ip_servidor>:<porto_servidor> p <secs> <nthreads>\n");
+        printf("Modo automatico de leitura: ./table_client <ip_servidor>:<porto_servidor> g <secs> <nthreads>\n");
         printf("Exemplo de uso: binary/table-client 127.0.0.1:54322\n");
         return -1;
     }
 
     //Definir endereco do servidor
     address_port = strdup(argv[1]);
+
+
+    //Caso o cliente esteja em modo automatico
+    if(argc != 2){
+        mode = argv[2];
+        if(strcmp(mode, "g") != 0 && strcmp(mode, "p") != 0){
+            printf("Modo automatico invalido \"%s\".\n", mode);
+        }
+        int nThreads = atoi(argv[4]);
+        if(nThreads == 0){
+            printf("Numero de threads invalido.\n");
+            return -1;
+        }
+        pthread_t threads[nThreads];
+        for(int i = 0; i <  nThreads; i++){
+            if (pthread_create(&threads[i], NULL, &thread_main, (void*)address_port ) != 0){
+                printf("Ocorreu um erro na criacao das threads.\n");
+                return -1;
+            }
+        }
+        sleep(atoi(argv[3]));
+        for(int j = 0; j < nThreads; j++){
+            if(pthread_detach(threads[j]) != 0){
+                printf("Ocorreu um erro ao terminar as threads.\n");
+                return -1;
+            }
+        }
+        printf("Numero total de operacoes concluidas pelo conjunto de threads: %d\n", nOp);
+        printf("Latencia total: %ld microsegundos\n", totLat);
+        printf("Latencia media de cada operacao concluida: %ld microsegundos\n", totLat/nOp);
+        return 0;
+    }
 
 	/* Iniciar instância do stub e Usar rtable_connect para estabelcer ligação ao servidor*/
 

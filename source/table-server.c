@@ -15,7 +15,7 @@ Pedro Almeida - 46401
 #include "network_server.h"
 #include "table_skel.h"
 
-int logsize = 50;
+int logsize = 10000;
 
 /*
    Programa que implementa um servidor de uma tabela hash com chainning.
